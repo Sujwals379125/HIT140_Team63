@@ -1,0 +1,103 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Load the datasets
+dataset1 = pd.read_csv("dataset1.csv")
+dataset2 = pd.read_csv("dataset2.csv")
+dataset3 = pd.read_csv("dataset3.csv")
+
+# Merge the datasets based on the 'ID' column
+merged_data = pd.merge(dataset1, dataset2, on='ID')
+merged_data = pd.merge(merged_data, dataset3, on='ID')
+
+# Data cleaning (if necessary)
+# Handle missing values, inconsistent data types, etc.
+
+# Data exploration
+print(merged_data.describe())
+sns.pairplot(merged_data)
+plt.show()
+
+# Correlation matrix
+correlation_matrix = merged_data.corr()
+sns.heatmap(correlation_matrix, annot=True)
+plt.show()
+
+# Example analysis: Relationship between screen time and well-being
+# Calculate total screen time
+merged_data['total_screen_time'] = merged_data[['C_we', 'C_wk', 'G_we', 'G_wk', 'S_we', 'S_wk', 'T_we', 'T_wk']].sum(axis=1)
+
+# Calculate average well-being score
+merged_data['avg_wellbeing'] = merged_data[['Optm', 'Usef', 'Relx', 'Intp', 'Engs', 'Dealpr', 'Thcklr', 'Goodme', 'Clsep', 'Conf', 'Mkmind', 'Loved', 'Intthg', 'Cheer']].mean(axis=1)
+
+# Correlation between total screen time and average well-being
+correlation = merged_data['total_screen_time'].corr(merged_data['avg_wellbeing'])
+print("Correlation between total screen time and average well-being:", correlation)
+
+
+
+
+#1. Descriptive Statistical Analyses:
+
+#Example 1: Comparing screen time across genders
+
+# Group by gender and calculate average screen time
+avg_screen_time_by_gender = merged_data.groupby('gender')['total_screen_time'].mean()
+
+# Visualize the results
+plt.bar(avg_screen_time_by_gender.index, avg_screen_time_by_gender.values)
+plt.xlabel('Gender')
+plt.ylabel('Average Screen Time')
+plt.title('Average Screen Time by Gender')
+plt.show()
+
+
+
+#Example 2: Analyzing the relationship between deprivation and well-being
+# Calculate correlation between deprivation and average well-being
+correlation = merged_data['deprived'].corr(merged_data['avg_wellbeing'])
+print("Correlation between deprivation and average well-being:", correlation)
+
+
+#2. Inferential Statistical Analyses:
+from scipy.stats import ttest_ind
+#Example 1: T-test to compare well-being scores between high and low screen time groups
+# Create a binary variable for high/low screen time
+merged_data['high_screen_time'] = (merged_data['total_screen_time'] > merged_data['total_screen_time'].quantile(0.75))
+
+# Perform t-test
+t_stat, p_value = ttest_ind(merged_data['avg_wellbeing'][merged_data['high_screen_time']], merged_data['avg_wellbeing'][~merged_data['high_screen_time']])
+print("T-statistic:", t_stat)
+print("P-value:", p_value)
+
+
+#Example 2: ANOVA to compare well-being scores across different minority groups
+# Perform ANOVA
+from scipy.stats import f_oneway
+
+f_stat, p_value = f_oneway(merged_data['avg_wellbeing'][merged_data['minority'] == 0], merged_data['avg_wellbeing'][merged_data['minority'] == 1])
+print("F-statistic:", f_stat)
+print("P-value:", p_value)
+
+
+#3 Linear Regression
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error
+
+# Split the data into training and testing sets
+X = merged_data[['total_screen_time', 'gender', 'minority', 'deprived']]
+y = merged_data['avg_wellbeing']
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Create and train the model
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+# Make predictions
+y_pred = model.predict(X_test)
+
+# Evaluate the model
+mse = mean_squared_error(y_test, y_pred)
+print("Mean Squared Error:", mse)
